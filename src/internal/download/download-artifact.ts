@@ -94,10 +94,11 @@ export async function streamExtractExternal(
 
   return new Promise((resolve, reject) => {
     const timerFn = (): void => {
-      core.error(`Timeout reached: Blob storage chunk did not respond in ${timeout}ms`)
+      core.info(`Timeout reached: Blob storage chunk did not respond in ${timeout}ms`)
       response.message.destroy(
         new Error(`Blob storage chunk did not respond in ${timeout}ms`)
       )
+      throw new Error(`Blob storage chunk did not respond in ${timeout}ms`)
     }
     let timer = setTimeout(timerFn, timeout)
 
@@ -107,7 +108,9 @@ export async function streamExtractExternal(
 
     core.info(`Setting up stream pipeline for download and extraction`)
     response.message.pipe(passThrough)
+    core.info(`Piping response message to passThrough stream`)
     passThrough.pipe(hashStream)
+    core.info(`Piping passThrough stream to unzip.Extract`)
     const extractStream = passThrough
 
     let dataChunksReceived = 0
