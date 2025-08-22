@@ -98,6 +98,9 @@ export async function streamExtractExternal(
       response.message.destroy(
         new Error(`Blob storage chunk did not respond in ${timeout}ms`)
       )
+      setTimeout(() => {
+        reject('Timeout was reached');
+      })
     }
     let timer = setTimeout(timerFn, timeout)
 
@@ -110,6 +113,7 @@ export async function streamExtractExternal(
     core.info(`Piping response message to passThrough stream`)
     passThrough.pipe(hashStream)
     core.info(`Piping passThrough stream to unzip.Extract`)
+    let started = Date.now();
     const extractStream = passThrough
 
     let dataChunksReceived = 0
@@ -117,7 +121,7 @@ export async function streamExtractExternal(
       .on('data', (chunk) => {
         dataChunksReceived++;
         if (dataChunksReceived % 10 === 0) {
-          core.info(`Received ${dataChunksReceived} data chunks (chunk size: ${chunk.length} bytes)`)
+          core.info(`Received ${dataChunksReceived} data chunks (chunk size: ${chunk.length} bytes), time passed: ${Date.now() - started}ms`)
         }
         clearTimeout(timer)
         timer = setTimeout(timerFn, timeout)
@@ -135,6 +139,9 @@ export async function streamExtractExternal(
         reject(error)
       })
       .pipe(unzip.Extract({ path: directory }))
+      .on('data', () => {
+        core.info(`Data chunk received during extraction`)
+      })
       .on('close', () => {
         core.info(`Extraction completed successfully`)
         core.info(`Total data chunks received: ${dataChunksReceived}`)
