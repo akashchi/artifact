@@ -98,7 +98,6 @@ export async function streamExtractExternal(
       response.message.destroy(
         new Error(`Blob storage chunk did not respond in ${timeout}ms`)
       )
-      throw new Error(`Blob storage chunk did not respond in ${timeout}ms`)
     }
     let timer = setTimeout(timerFn, timeout)
 
@@ -116,18 +115,22 @@ export async function streamExtractExternal(
     let dataChunksReceived = 0
     extractStream
       .on('data', (chunk) => {
-        dataChunksReceived++
-        if (dataChunksReceived % 100 === 0) {
-          core.debug(`Received ${dataChunksReceived} data chunks (chunk size: ${chunk.length} bytes)`)
+        dataChunksReceived++;
+        if (dataChunksReceived % 10 === 0) {
+          core.info(`Received ${dataChunksReceived} data chunks (chunk size: ${chunk.length} bytes)`)
         }
         clearTimeout(timer)
         timer = setTimeout(timerFn, timeout)
       })
       .on('error', (error: Error) => {
+        core.info(
+          `Stream error during artifact download: ${error.message}`
+        )
         core.error(
           `Stream error during artifact download: ${error.message}`
         )
         core.debug(`Stream error stack trace: ${error.stack}`)
+        core.info(`Stream error stack trace: ${error.stack}`)
         clearTimeout(timer)
         reject(error)
       })
